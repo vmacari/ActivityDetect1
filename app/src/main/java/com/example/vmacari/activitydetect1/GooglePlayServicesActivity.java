@@ -12,6 +12,7 @@ import android.widget.LinearLayout;
 
 import com.example.vmacari.utils.ActivityChangedEvent;
 import com.example.vmacari.utils.BusProvider;
+import com.google.android.gms.location.DetectedActivity;
 import com.squareup.otto.Subscribe;
 
 import org.achartengine.ChartFactory;
@@ -47,23 +48,15 @@ public class GooglePlayServicesActivity extends Activity implements View.OnTouch
 
         mDetectionRequester = new DetectionRequester(getApplicationContext());
 
+        mRenderer.addSeriesRenderer(getRendererWithColor (Color.RED,  "IN_VEHICLE"));
+        mRenderer.addSeriesRenderer(getRendererWithColor (Color.BLUE,  "ON_FOOT"));
+        mRenderer.addSeriesRenderer(getRendererWithColor (Color.GREEN,  "ON_BICYCLE"));
+        mRenderer.addSeriesRenderer(getRendererWithColor (Color.BLACK,  "STILL"));
+        mRenderer.addSeriesRenderer(getRendererWithColor (Color.GRAY,  "UNKNOWN"));
+        mRenderer.addSeriesRenderer(getRendererWithColor (Color.YELLOW,  "TILTING"));
+        mRenderer.addSeriesRenderer(getRendererWithColor (Color.CYAN,  "WALKING"));
+        mRenderer.addSeriesRenderer(getRendererWithColor (Color.MAGENTA,  "RUNNING"));
 
-        // Now we create the renderer
-        XYSeriesRenderer renderer = new XYSeriesRenderer();
-        renderer.setLineWidth(2);
-        renderer.setColor(Color.BLUE);
-
-        renderer.setDisplayBoundingPoints(true);
-        renderer.setPointStyle(PointStyle.CIRCLE);
-        renderer.setPointStrokeWidth(3);
-
-        renderer.setChartValuesTextSize(12);
-        renderer.setHighlighted(true);
-        renderer.setShowLegendItem(true);
-        renderer.setDisplayChartValues(true);
-        renderer.setDisplayBoundingPoints(true);
-
-        mRenderer.addSeriesRenderer(renderer);
 
         mRenderer.setBarSpacing(1);
         mRenderer.setGridColor(Color.RED);
@@ -114,6 +107,26 @@ public class GooglePlayServicesActivity extends Activity implements View.OnTouch
     }
 
 
+    private XYSeriesRenderer getRendererWithColor (int color, String decription) {
+
+        XYSeriesRenderer renderer = new XYSeriesRenderer();
+        renderer.setLineWidth(2);
+        renderer.setColor(color);
+
+        renderer.setDisplayBoundingPoints(true);
+        renderer.setPointStyle(PointStyle.CIRCLE);
+        renderer.setPointStrokeWidth(3);
+
+        renderer.setChartValuesTextSize(12);
+        renderer.setHighlighted(true);
+        renderer.setShowLegendItem(true);
+        renderer.setDisplayChartValues(true);
+        renderer.setDisplayBoundingPoints(true);
+
+        return renderer;
+
+    }
+
     @Subscribe
     public void receiveActivityReport (ActivityChangedEvent changeEvent) {
 
@@ -142,17 +155,42 @@ public class GooglePlayServicesActivity extends Activity implements View.OnTouch
         mActivityHistory.add(changeEvent);
 
 
-        CategorySeries series = new CategorySeries("Activity");
+        CategorySeries seriesInVehicle = new CategorySeries("IN_VEHICLE");
+        CategorySeries seriesOnFoot = new CategorySeries("ON_FOOT");
+        CategorySeries seriesOnBicycle = new CategorySeries("ON_BICYCLE");
+        CategorySeries seriesStill = new CategorySeries("STILL");
+        CategorySeries seriesUnknown = new CategorySeries("UNKNOWN");
+        CategorySeries seriesTilting = new CategorySeries("TILTING");
+        CategorySeries seriesWalking = new CategorySeries("WALKING");
+        CategorySeries seriesRunning = new CategorySeries("RUNNING");
+
 
         for (ActivityChangedEvent ace : mActivityHistory) {
-            series.add(ace.getTypeString(), ace.getConfidence());
+            seriesInVehicle.add(ace.getTypeString(), ace.getActivityType().getType() == DetectedActivity.IN_VEHICLE ? ace.getConfidence() : 0);
+            seriesOnFoot.add(ace.getTypeString(), ace.getActivityType().getType() == DetectedActivity.ON_FOOT ? ace.getConfidence() : 0);
+            seriesOnBicycle.add(ace.getTypeString(), ace.getActivityType().getType() == DetectedActivity.ON_BICYCLE ? ace.getConfidence() : 0);
+            seriesStill.add(ace.getTypeString(), ace.getActivityType().getType() == DetectedActivity.STILL ? ace.getConfidence() : 0);
+            seriesUnknown.add(ace.getTypeString(), ace.getActivityType().getType() == DetectedActivity.UNKNOWN ? ace.getConfidence() : 0);
+            seriesTilting.add(ace.getTypeString(), ace.getActivityType().getType() == DetectedActivity.TILTING ? ace.getConfidence() : 0);
+            seriesWalking.add(ace.getTypeString(), ace.getActivityType().getType() == DetectedActivity.WALKING ? ace.getConfidence() : 0);
+            seriesRunning.add(ace.getTypeString(), ace.getActivityType().getType() == DetectedActivity.RUNNING ? ace.getConfidence() : 0);
         }
 
         mDataset.clear();
-        mDataset.addSeries(series.toXYSeries());
+        //mDataset.addSeries(series.toXYSeries());
+        mDataset.addSeries( seriesInVehicle.toXYSeries());
+        mDataset.addSeries( seriesOnFoot.toXYSeries());
+        mDataset.addSeries( seriesOnBicycle.toXYSeries());
+        mDataset.addSeries( seriesStill.toXYSeries());
+        mDataset.addSeries( seriesUnknown.toXYSeries());
+        mDataset.addSeries( seriesTilting.toXYSeries());
+        mDataset.addSeries( seriesWalking.toXYSeries());
+        mDataset.addSeries( seriesRunning.toXYSeries());
+
+
 
         mChartView = ChartFactory.getBarChartView(this,
-                mDataset, mRenderer, BarChart.Type.DEFAULT);
+                mDataset, mRenderer, BarChart.Type.STACKED);
 
         mChartView.setClickable(true);
         mChartView.setHapticFeedbackEnabled(true);
